@@ -1,104 +1,69 @@
-# src/download_earnings_bbg.py
-
-# FIELD DY895
+# earnings_date_download.py
 
 import blpapi
 import pandas as pd
+from blpapi import SessionOptions, Session, Service, Request
 import datetime
 import time
 
-from blpapi import SessionOptions, Session
+# Bloomberg field for earnings announcement date
+FIELD = "DY895"
+YEARS_BACK = 10
+INPUT_CSV = "/Users/aj/stat-arb-engine/data/sp500_tickers.csv"
+OUTPUT_CSV = "/Users/aj/stat-arb-engine/data/earnings_dates.csv"
 
-# --- SETTINGS ---
-TICKERS_FILE = "data/sp500_tickers.csv"
-SAVE_PATH = "data/earnings_dates_bbg.csv"
-START_DATE = (datetime.datetime.now() - datetime.timedelta(days=365 * 10)).strftime("%Y%m%d")
-END_DATE = datetime.datetime.now().strftime("%Y%m%d")
-
-# --- Bloomberg Request Helper ---
-def fetch_earnings_dates(tickers):
+def init_session():
     options = SessionOptions()
-
+    options.setServerHost("localhost")
+    options.setServerPort(8194)
     session = Session(options)
     if not session.start():
-        print("Failed to start session.")
-        return []
-
+        raise RuntimeError("Failed to start session.")
     if not session.openService("//blp/refdata"):
-        print("Failed to open service.")
-        return []
+        raise RuntimeError("Failed to open //blp/refdata")
+    return session
 
-    service = session.getService("//blp/refdata")
-    request = service.createRequest("HistoricalDataRequest")
-
-    for ticker in tickers:
-        request.append("securities", f"{ticker} US Equity")
-
-    request.append("fields", "ERN_ANN_DT")
-    request.set("startDate", START_DATE)
-    request.set("endDate", END_DATE)
+def fetch_earnings_dates(session, tickers):
+    refDataSvc = session.getService("//blp/refdata")
+    request = refDataSvc.createRequest("HistoricalDataRequest")
     request.set("periodicitySelection", "DAILY")
-    request.set("adjustmentSplit", True)
+    request.set("startDate", (datetime.datetime.now() - datetime.timedelta(days=365 * YEARS_BACK)).strftime('%Y%m%d'))
+    request.set("endDate", datetime.datetime.now().strftime('%Y%m%d'))
+    request.getElement("fields").appendValue(FIELD)
+    
+    for ticker in tickers:
+        request.getElement("securities").appendValue(ticker)
 
     session.sendRequest(request)
-    data = []
+    earnings_data = {ticker: [] for ticker in tickers}
 
     while True:
-        ev = session.nextEvent()
+        ev = session.nextEvent(500)
         for msg in ev:
-            if msg.messageType() == "HistoricalDataResponse":
-                sec_data = msg.getElement("securityData")
-                security = sec_data.getElementAsString("security")
-                ticker = security.split()[0]
-
-                field_data = sec_data.getElement("fieldData")
-                for i in range(field_data.numValues()):
-                    record = field_data.getValueAsElement(i)
-                    date = record.getElementAsDatetime("date").date()
-
-                    try:
-                        earnings_date = record.getElementAsDatetime("ERN_ANN_DT").date()
-                        data.append({
-                            "Ticker": ticker,
-                            "Record Date": date,
-                            "Earnings Date": earnings_date
-                        })
-                    except:
-                        continue
-
+            if msg.hasElement("securityData"):
+                securityData = msg.getElement("securityData")
+                ticker = securityData.getElementAsString("security")
+                if securityData.hasElement("fieldData"):
+                    for item in securityData.getElement("fieldData").values():
+                        if item.hasElement(FIELD):
+                            earnings_date = item.getElementAsDatetime(FIELD)
+                            earnings_data[ticker].append(earnings_date.strftime('%Y-%m-%d'))
         if ev.eventType() == blpapi.Event.RESPONSE:
             break
 
-    return data
+    # Transpose into desired DataFrame format
+    max_len = max(len(v) for v in earnings_data.values())
+    for ticker in earnings_data:
+        earnings_data[ticker] += [''] * (max_len - len(earnings_data[ticker]))
+    df = pd.DataFrame(earnings_data)
+    return df
 
-# --- MAIN ---
+def main():
+    tickers = pd.read_csv(INPUT_CSV, header=None)[0].tolist()
+    session = init_session()
+    df = fetch_earnings_dates(session, tickers)
+    df.to_csv(OUTPUT_CSV, index=False)
+    print(f"Earnings dates saved to: {OUTPUT_CSV}")
+
 if __name__ == "__main__":
-    with open(TICKERS_FILE) as f:
-        tickers = [line.strip() for line in f if line.strip()]
-
-    print(f"Fetching 10Y earnings dates for {len(tickers)} tickers...")
-
-    all_data = fetch_earnings_dates(tickers)
-
-        # Build pivoted DataFrame: Tickers as columns, earnings dates as rows
-    df = pd.DataFrame(all_data)
-
-    # Group by ticker, sort each group by earnings date
-    df = df.sort_values(by=["Ticker", "Earnings Date"])
-
-    # For each ticker, get the list of earnings dates (sorted)
-    grouped = df.groupby("Ticker")["Earnings Date"].apply(list)
-
-    # Combine into a DataFrame
-    earnings_pivot = pd.DataFrame.from_dict(grouped.to_dict(), orient="columns")
-
-    # Transpose so tickers are columns
-    earnings_pivot = earnings_pivot.transpose()
-
-    # Pad shorter lists with NaT and transpose back
-    earnings_pivot = earnings_pivot.apply(lambda col: pd.Series(col), axis=1)
-
-    # Save to CSV
-    earnings_pivot.to_csv(SAVE_PATH, index=False)
-    print(f"Saved earnings history to: {SAVE_PATH}")
-
+    main()
