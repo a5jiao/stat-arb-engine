@@ -9,8 +9,8 @@ import time
 # Bloomberg field for earnings announcement date
 FIELD = "DY895"
 YEARS_BACK = 10
-INPUT_CSV = "/Users/aj/stat-arb-engine/data/sp500_tickers.csv"
-OUTPUT_CSV = "/Users/aj/stat-arb-engine/data/earnings_dates.csv"
+INPUT_CSV = "data/sp500_tickers.csv"
+OUTPUT_CSV = "data/earnings_dates.csv"
 
 def init_session():
     options = SessionOptions()
@@ -61,7 +61,7 @@ def fetch_earnings_dates(session, tickers):
 def main():
     tickers = pd.read_csv(INPUT_CSV, header=None)[0].tolist()
     session = init_session()
-    df = fetch_earnings_dates(session, tickers)
+    df = fetch_earnings_dates(session, tickers[:5])
     df.to_csv(OUTPUT_CSV, index=False)
     print(f"Earnings dates saved to: {OUTPUT_CSV}")
 
