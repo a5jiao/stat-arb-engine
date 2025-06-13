@@ -1,5 +1,7 @@
 # src/download_earnings_bbg.py
 
+# FIELD DY895
+
 import blpapi
 import pandas as pd
 import datetime
