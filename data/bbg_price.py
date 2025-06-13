@@ -17,11 +17,11 @@ def init_session():
         raise RuntimeError("Failed to open //blp/refdata.")
     return session
 
-def get_mkt_cap(ticker, session):
+def get_px_last(ticker, session):
     refDataService = session.getService("//blp/refdata")
     request = refDataService.createRequest("HistoricalDataRequest")
     request.append("securities", ticker)
-    request.append("fields", "CUR_MKT_CAP")  # Earnings announcement dates
+    request.append("fields", "PX_LAST")  
 
     end_date = datetime.datetime.now().strftime('%Y%m%d')
     start_date = (datetime.datetime.now()-timedelta(365*10)).strftime('%Y%m%d')
@@ -41,7 +41,7 @@ def get_mkt_cap(ticker, session):
                 fieldData = securityData.getElement("fieldData")
                 for i in range(fieldData.numValues()):
                     data = fieldData.getValue(i)
-                    values[data['date']] = data['CUR_MKT_CAP']
+                    values[data['date']] = data['PX_LAST']
                         
         if event.eventType() == blpapi.Event.RESPONSE:
             break
@@ -59,7 +59,7 @@ if __name__ == "__main__":
     all_data = {}
     for i, ticker in tqdm(enumerate(tickers)):
         try:
-            dates = get_mkt_cap(f'{ticker} US EQUITY', session)
+            dates = get_px_last(f'{ticker} US EQUITY', session)
             all_data[ticker] = dates
         except Exception as e:
             print(f"Failed to get data for {ticker}: {e}")
@@ -67,5 +67,5 @@ if __name__ == "__main__":
 
     # Convert to DataFrame (columns = tickers, rows = earninbgs dates)
     df = pd.DataFrame(dict([(k, pd.Series(v)) for k, v in all_data.items()]))
-    df.to_csv('data/cur_mkt_cap.csv')
-    print('Data saved to data/cur_mkt_cap.csv')
+    df.to_csv('data/bbg_prices.csv')
+    print('Data saved to data/bbg_prices.csv')
