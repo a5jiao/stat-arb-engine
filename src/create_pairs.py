@@ -8,6 +8,8 @@ from tqdm.contrib.concurrent import thread_map
 import sqlite3
 import os
 import openpyxl
+from concurrent.futures import as_completed, ThreadPoolExecutor
+import threading
 
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
