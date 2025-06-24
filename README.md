@@ -4,7 +4,9 @@ A statistical arbitrage trading model that scans the S&P 500 for mean-reverting 
 
 **Current Stage:**
 Data validation - ✅  
-Creating Database of 26972 Pairs (Pair permutations of same-sector stocks under S&P500) - Currently Running!  
+Creating Database of 26972 Pairs (Pair permutations of same-sector stocks under S&P500) - Done ✅
+
+Currently: **MIDTERMS**
 
 **Next Step:**
 Backtest Model on 10 years of data, 26972 pairs  
