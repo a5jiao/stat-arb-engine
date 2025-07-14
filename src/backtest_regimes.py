@@ -552,13 +552,13 @@ def export_to_excel(all_trades, filename='statistical_arbitrage_trades.xlsx'):
 if __name__ == "__main__":
     # Test with small sample first
     all_pairs = get_all_pairs()
-    sample_pairs = all_pairs[:200]
+    sample_pairs = all_pairs
     
     # Run backtest
     trades = run_full_backtest(sample_pairs=sample_pairs)
     
     # Export results
-    export_to_excel(trades, 'regime_test_trades.xlsx')
+    export_to_excel(trades, 'regime_27k_trades.xlsx')
     
     # Show sample trades
     trades_df = create_trades_dataframe(trades)
