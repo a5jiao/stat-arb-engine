@@ -5,8 +5,9 @@ A statistical arbitrage trading model that scans the S&P 500 for mean-reverting 
 **Current Stage:**
 Data validation - ✅  
 Creating Database of 26972 Pairs (Pair permutations of same-sector stocks under S&P500) - Done ✅
+Backtesting Model on 10 years of data, 26972 pairs. - ✅
 
-Currently: Backtesting Model on 10 years of data, 26972. One backtest considers different regimes.
+Current: Grid Search to validate dynamic regime entry thesholds (since simple regime recognition showed better backtested performance)
 
 **Next Step:**
 Go through trades in Excel, create pivot tables and optimize strategy  
